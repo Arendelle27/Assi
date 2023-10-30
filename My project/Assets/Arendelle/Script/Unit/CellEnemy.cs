@@ -90,6 +90,7 @@ this.co.isTrigger = true;
             {
                 Game.Instance.CellMain.CurHP += 1;
                 this.BeAssimilate();
+                this.canAss = false;
                 return;
             }
         }
@@ -155,6 +156,7 @@ this.co.isTrigger = true;
         this.gameObject.SetActive(false);
         Game.Instance.exampleManager.DropOutExampleBll(this.transform.position);
         yield return new WaitForSeconds(0.5f);
+        CellAccManager.Instance.cellEnemyList.Remove(this.id);
         Destroy(this.gameObject);
     }
 

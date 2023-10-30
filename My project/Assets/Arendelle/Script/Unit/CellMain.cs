@@ -7,6 +7,8 @@ using UnityEngine;
 public class CellMain : Unit
 {
 
+    Vector2 dir=new Vector2(0,0);
+
     void Start()
     {
         this.Init();
@@ -15,7 +17,13 @@ public class CellMain : Unit
     public override void Update()
     {
         if(Game.Instance.Status!=GameState.InGame)
+        {
+            if (this.rb.velocity != Vector2.zero)
+            {
+                this.rb.velocity = Vector2.zero;
+            }
             return;
+        }
         if (this.CurHP <= 0)
         {
             Game.Instance.Status = GameState.End;
@@ -44,7 +52,6 @@ public class CellMain : Unit
 
     public override void Init()
     {
-        this.transform.position = new Vector2(0, 0);
         this.maxHP = Game.Instance.effectManager.dataAcc[CellKind.Player][DataType.Hp];
         this.normSpeed = Game.Instance.effectManager.dataAcc[CellKind.Player][DataType.Speed];
         this.attack= Game.Instance.effectManager.dataAcc[CellKind.Player][DataType.Attack];
@@ -53,5 +60,6 @@ public class CellMain : Unit
         this.speed = this.normSpeed;
         this.curIdleTime = 0f;
         this.rb.velocity = Vector2.zero;
+        this.transform.position = new Vector2(0, 0);
     }
 }

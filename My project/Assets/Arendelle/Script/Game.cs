@@ -58,6 +58,10 @@ public class Game : MonoSingleton<Game>
         InputManager.Instance.Init();
         CellAccManager.Instance.Init();
         UIManager.Instance.Init();
+        if(this.exampleManager!=null)
+        {
+            this.exampleManager.Init();
+        }
         this.CellMain.Init();
     }
 }

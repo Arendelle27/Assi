@@ -184,7 +184,7 @@ MonoBehaviour:
   curMoveTimer: 0
   id: 0
   maxBlastSpeed: 10
-  deadTime: 3
+  deadTime: 2
   canAss: 0
 --- !u!70 &142351640216785514
 CapsuleCollider2D:

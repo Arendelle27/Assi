@@ -23,7 +23,7 @@ public class CellAccManager : MonoSingleton<CellAccManager>
 
     public int wave = 0;
 
-    public int enemyId;
+    public int enemyId=0;
 
     public float addPlHP=1f;
 
@@ -49,7 +49,7 @@ public class CellAccManager : MonoSingleton<CellAccManager>
         if (curTime <= 0f)
         {
             wave++;
-            if (wave % 2 == 0&&wave!=0)
+            if (wave % 3 == 0&&wave!=0)
             {
                 maxMonsterNumber += 2;
             }
@@ -96,6 +96,7 @@ public class CellAccManager : MonoSingleton<CellAccManager>
             ca.attack = Game.Instance.effectManager.dataAcc[kind][DataType.Attack];
             ca.normSpeed = Game.Instance.effectManager.dataAcc[kind][DataType.Speed];
 
+            ca.gameObject.layer= LayerMask.NameToLayer("Enemy");
             ca.onDead+=RemoveCell;
             ca.Init();
 
@@ -129,18 +130,20 @@ public class CellAccManager : MonoSingleton<CellAccManager>
     void Assiminate(int id)//×ª»»
     {
 
-
+        if (!cellEnemyList.ContainsKey(id))
+            return;
         cellAccList.Add(id, cellEnemyList[id].GetComponent<CellAcc>());
 
         cellAccIds.Enqueue(id);
         if(cellAccIds.Count>maxAccNumber)
         {
             int id1 = cellAccIds.Dequeue();
-            if (cellAccList[id1].isMove && cellAccList[id1]!=null)
+            if (cellAccList.ContainsKey(id1)&&cellAccList[id1].isMove && cellAccList[id1]!=null)
             {
                 cellAccIds.Enqueue(id1);
                 id1 = cellAccIds.Dequeue();
             }
+            if(cellAccList.ContainsKey(id1))
             Destroy(cellAccList[id1].gameObject);
             cellAccList.Remove(id1);
         }
@@ -151,6 +154,7 @@ public class CellAccManager : MonoSingleton<CellAccManager>
         cellAccList[id].spriteRenderer.sprite = Game.Instance.spriteManager.characterSpriteDic[Tool.CeKIndToChaTy(cellAccList[id].cellKind)][characterStatus.Normal];
         cellAccList[id].spriteRenderer.color = Color.white;
         cellAccList[id].co.isTrigger = false;
+        cellAccList[id].gameObject.layer = LayerMask.NameToLayer("Acc");
 
         cellEnemyList.Remove(id);
     }
@@ -196,12 +200,10 @@ public class CellAccManager : MonoSingleton<CellAccManager>
 
         foreach(var cellAcc in this.cellAccList)
         {
-            if(cellAcc.Value!=null)
             Destroy(cellAcc.Value.gameObject);
         }
         foreach (var cellEnemy in this.cellEnemyList)
         {
-            if (cellEnemy.Value != null)
                 Destroy(cellEnemy.Value.gameObject);
         }
         this.cellAccList.Clear();
