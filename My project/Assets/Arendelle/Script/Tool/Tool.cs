@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
+using Unity.VisualScripting;
 using UnityEngine;
 
 public static class Tool
@@ -14,23 +15,20 @@ public static class Tool
         return bounds.Contains(pos);//如果鼠标垫在图形内部，返回true
     }
 
-    public static characterType CeKIndToChaTy(CellKind kind)
+    public static characterType KIndToChaTy(PlantKind kind)
     {
         switch (kind)
         {
-            case CellKind.DuMogu:
+            case PlantKind.DuMogu:
                 return characterType.DMG;
-            case CellKind.HuoLongGuo:
+            case PlantKind.HuoLongGuo:
                 return characterType.HLG;
-            case CellKind.TaHuang:
+            case PlantKind.TaHuang:
                 return characterType.TH;
-            case CellKind.ZuiChunHua:
+            case PlantKind.ZuiChunHua:
                 return characterType.ZCH;
             default:
                 return characterType.Player;
         }
     }
-
-
-
 }

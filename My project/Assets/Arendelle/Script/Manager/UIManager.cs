@@ -4,65 +4,25 @@ using UnityEngine;
 using UnityEngine.UI;
 using UniRx;
 
-public class UIManager : MonoSingleton<UIManager>
+public class UIManager: MonoSingleton<UIManager>
 {
     public UIWorldElement uIyEles;
 
-    public Slider hp;
-    public Image hpFill;
 
-    public Button startButton;
-    public Button exitButton;
-    public Button resetBUtton;
+    public StartPanel startPlane;
+    public GamePanel gamePlane;
+    public ResPanel resPlane;
 
-    public Text resText;
-
-    public GameObject startPlane;
-    public GameObject gamePlane;
-    public GameObject endPlane;
-    void Start()
+    public void UpdateUI(GameStatus status)
     {
-        hp.maxValue = Game.Instance.CellMain.maxHP;
-
-        startButton.OnClickAsObservable()
-        .Subscribe(_ =>
-        {
-            Game.Instance.Status = GameState.InGame;
-        })
-        .AddTo(this);
-
-
-        exitButton.OnClickAsObservable()
-        .Subscribe(_ =>
-        {
-            Game.Instance.Status = GameState.Start;
-        })
-        .AddTo(this);
-
-        resetBUtton.OnClickAsObservable()
-        .Subscribe(_ =>
-        {
-            Game.Instance.Status = GameState.InGame;
-        })
-        .AddTo(this);
-    }
-
-// Update is called once per frame
-void Update()
-    {
-        hp.value = Mathf.Lerp(hp.value, Game.Instance.CellMain.CurHP, 0.02f);
-    }
-
-    public void UpdateUI()
-    {
-            this.startPlane.SetActive(Game.Instance.Status==GameState.Start);
-            this.gamePlane.SetActive(Game.Instance.Status==GameState.InGame);
-            this.endPlane.SetActive(Game.Instance.Status == GameState.End);
+        this.startPlane.gameObject.SetActive(status == GameStatus.Start);
+        this.gamePlane.gameObject.SetActive(status == GameStatus.InGame);
+        this.resPlane.gameObject.SetActive(status == GameStatus.End);
     }
 
     public void Init()
     {
-        this.hp.value= Game.Instance.CellMain.maxHP;
-        this.uIyEles.ExperLIne.fillAmount = 0;
+        this.uIyEles.Init();
+        this.gamePlane.Init();
     }
 }

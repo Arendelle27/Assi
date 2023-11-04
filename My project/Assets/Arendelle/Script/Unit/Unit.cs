@@ -1,4 +1,6 @@
 using DG.Tweening;
+using Sirenix.OdinInspector;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using UniRx;
@@ -7,10 +9,54 @@ using UnityEngine.Events;
 
 public class Unit : MonoBehaviour
 {
+    #region 组件
+    public Rigidbody2D rb;
 
-    public CellKind cellKind;//植物种类
+    public SpriteRenderer sp;
 
-    float curHP;//当前的生命值
+    public Collider2D co;
+
+    #endregion
+
+    #region 属性
+    [SerializeField, LabelText("ID"), Tooltip("该单位的id")]
+    public int id;
+
+    [SerializeField, LabelText("植物种类"), Tooltip("该单位的种类")]
+    public PlantKind plantKind;//植物种类
+
+    [SerializeField, LabelText("生命值上限"), Tooltip("该单位生命上限，基础生命值+等级提升生命值")]
+    public float maxHP;//最大生命值
+
+    [SerializeField, LabelText("攻击力"), Tooltip("该单位攻击的攻击力")]
+    public float attack;//操作攻击的攻击力
+
+    [SerializeField, LabelText("移动速度"), Tooltip("该单位正常情况下的移动速度")]
+    public float normSpeed = 4.0f;
+
+    [SerializeField, LabelText("开始回血用时"), Tooltip("脱战后开始回血的时间，只适用与玩家和随从")]
+    public float idleTime = 2f;//脱战后开始回血的时间
+
+    [SerializeField, LabelText("每秒回复生命值"), Tooltip("回血时，每秒中回复生命值数")]
+    public float hpRecover = 1f;//每秒回复的生命值
+
+
+    [SerializeField, LabelText("减速时间"), Tooltip("受到减速效果的持续时间")]
+    public float slowtime = 3f;//受到减速效果的时间，不一定为3f
+    #endregion
+
+    public enum Unit_Status
+    {
+        idle,
+        attack,
+        dead,
+        none
+    }
+
+    #region 当前状态
+    public Unit_Status curStatus; //当前状态
+
+    public float curHP=0f;
     public float CurHP
     {
         get
@@ -19,163 +65,145 @@ public class Unit : MonoBehaviour
         }
         set
         {
-            if(curHP>value)
+            if (curHP > value)
             {
-                StartCoroutine(BeAttack());
-                curIdleTime = 0f;
+                if(this.gameObject.activeSelf)
+                {
+                    In = StartCoroutine(Injured());
+                }
             }
-            if(value>maxHP)
+            if (value > maxHP)
             {
                 value = maxHP;
             }
             curHP = value;
         }
-    }
-    public float maxHP;//最大生命值
-    public bool isinjured=false;//是否受伤
+    }//当前的生命值
 
+    public float curSpeed = 0f;//当前的移动速度
 
-    public float Idleattack;//不主动操作敌人攻击反伤，没有就为0
-    public float attack;//操作攻击的攻击力,没有就为0
+    public Vector2 direction=new Vector2(0,0);//移动方向
+    #endregion
 
-    public float speed = 1.0f;
-    public float normSpeed = 4.0f;
+    #region 事件
+    public Subject<int> deadSubject = new Subject<int>();
+    public IObservable<int> OnDead => deadSubject;
 
-    public float idleTime=2f;//处于idle状态时间，累计n秒转换为rest状态开始生命值回复.
-    public float curIdleTime = 0f;
-    public float hpRecover = 1f;//每秒回复的生命值
-
-
-    public Rigidbody2D rb;
-
-    public SpriteRenderer spriteRenderer;
-
-    public Collider2D co;
-
-    public Effect effect;
-
-        public enum State
-    {
-        Idle,//常态
-        Decay,//中毒
-        Slow,//减速
-        Both,
-        Dead,
-    }
-    public State abnormalstate;//异常状态机
-
-    public enum MoveState
-    {
-        Idle,//不操作状态
-        Attack,//操作主动攻击状态
-        rest,//回复生命状态
-        Dead,//死亡状态
-    }
-    public MoveState teamState;//状态机
-
-    public float decaytime = 3f;//受到中毒效果的时间，不一定为3f
-    float curDecaytime = 0f;
-
-    public float slowtime = 3f;//受到减速效果的时间，不一定为3f
-    public float curSlowtime = 0f;
-
-    public UnityAction<int> onDead;
+    #endregion
 
     public virtual void Awake()
     {
         this.rb = GetComponent<Rigidbody2D>();
-        this.spriteRenderer = this.GetComponent<SpriteRenderer>();
+        this.sp = this.GetComponent<SpriteRenderer>();
         this.co = this.GetComponent<Collider2D>();
 
     }
 
-    public virtual void Init()
+    public virtual void Init()//初始化
     {
         this.CurHP = this.maxHP;
-        this.speed = this.normSpeed;
-        this.abnormalstate = State.Idle;
+        this.curSpeed = this.normSpeed;
+        this.direction=new Vector2(0,0);
     }
 
-    public  void Slow()
+    public void GetDataAcc(PlantKind kind)//随从及玩家获取三种初始属性
     {
-        if(this.abnormalstate==State.Idle)
-        {
-            this.abnormalstate = State.Slow;
-            speed = normSpeed / 2;
-        }
-        else if(this.abnormalstate==State.Decay)
-        {
-            this.abnormalstate = State.Both;
-            speed = normSpeed / 2;
-        }
-        this.curSlowtime =slowtime;
-
+        this.sp.sprite = Game.Instance.spriteManager.characterSpriteDic[Tool.KIndToChaTy(kind)][characterStatus.Normal];
+        this.maxHP =Game.Instance.dataManager.dataAcc[kind][DataType.Hp];
+        this.normSpeed = Game.Instance.dataManager.dataAcc[kind][DataType.Speed];
+        this.attack = Game.Instance.dataManager.dataAcc[kind][DataType.Attack];
     }
 
-    public void Decay()
+    public void GetDataEn(PlantKind kind)//敌人获取三种初始属性
     {
-        if (this.abnormalstate == State.Idle)
-        {
-            this.abnormalstate = State.Decay;
-        }
-        else if (this.abnormalstate == State.Slow)
-        {
-            this.abnormalstate = State.Both;
-        }
-        this.curDecaytime = decaytime;
-
+        this.sp.sprite = Game.Instance.spriteManager.characterSpriteDic[Tool.KIndToChaTy(kind)][characterStatus.Enemy];
+        this.maxHP = Game.Instance.dataManager.dataEn[kind][DataType.Hp];
+        this.normSpeed = Game.Instance.dataManager.dataEn[kind][DataType.Speed];
+        this.attack = Game.Instance.dataManager.dataEn[kind][DataType.Attack];
     }
 
-    public virtual void Update()
+    public void StartSlow()//开始减速
     {
-        if (this.abnormalstate == State.Idle)
-            return;
-
-        if(abnormalstate == State.Slow && this.enabled)
+        if (sl != null)
         {
-            this.curSlowtime -= Time.deltaTime;
-            if(curSlowtime<=0)
-            {
-                abnormalstate = State.Idle;
-                speed = normSpeed;
-            }
+            StopCoroutine(sl);
+            sl = null;
         }
-        else if(abnormalstate == State.Decay && this.enabled)
-        {
-            this.curDecaytime -= Time.deltaTime;
-            this.CurHP -= 2 * Time.deltaTime;
-
-            if (curDecaytime<=0)
-            {
-                abnormalstate = State.Idle;
-            }
-        }
-        else if(abnormalstate == State.Both && this.enabled)
-        {
-            this.curSlowtime -= Time.deltaTime;
-            this.curDecaytime -= Time.deltaTime;
-            this.CurHP -= 2 * Time.deltaTime;
-            if (curDecaytime <= 0)
-            {
-                abnormalstate = State.Slow;
-            }
-            if (curSlowtime <= 0)
-            {
-                abnormalstate = State.Decay;
-                speed = normSpeed;
-            }
-        }
-
-
+        sl = StartCoroutine(Slow());
     }
 
-    IEnumerator BeAttack()
+    public Coroutine sl;//减速协程
+    IEnumerator Slow()
     {
-        this.isinjured = true;
-        Sprite sp = this.spriteRenderer.sprite;
-        this.spriteRenderer.sprite = Game.Instance.spriteManager.characterSpriteDic[Tool.CeKIndToChaTy(this.cellKind)][characterStatus.Injured];
-        yield return new WaitForSeconds(0.5f);
-        this.isinjured = false;
-        this.spriteRenderer.sprite = sp;
+        this.curSpeed = this.normSpeed / 2;
+        yield return new WaitForSeconds(slowtime);
+        this.curSpeed  = this.normSpeed;
+
+        StopCoroutine(sl);
+        sl = null;
+    }
+
+    public virtual void StopCor()//停止协程
+    {
+        StopAllCoroutines();
+        if (sl != null)
+        {
+            sl = null;
+        }
+        if (In != null)
+        {
+            In = null;
+        }
+        if (wR != null)
+        {
+            wR = null;
+        }
+    }
+
+
+    public virtual void BeAttack(float attack)//被攻击
+    {
+        this.CurHP -= attack;
+
+        if(wR!=null)
+        {
+            StopCoroutine(wR);
+            wR = null;
+        }
+        if(this.gameObject.activeSelf)
+        {
+            wR = StartCoroutine(WaitRecover());
+        }
+    }
+
+    public Coroutine wR;//等待回血协程
+
+    public IEnumerator WaitRecover()//等待回血
+    {
+        yield return new WaitForSeconds(idleTime);
+        while(true)
+        {
+            if (this.CurHP < this.maxHP)
+            {
+                this.CurHP += this.hpRecover/5;
+            }
+            yield return new WaitForSeconds(0.2f);
+        }
+    }
+
+
+
+    public Coroutine In;
+    public IEnumerator Injured()
+    {
+        Sprite sp = this.sp.sprite;
+        this.sp.sprite = Game.Instance.spriteManager.characterSpriteDic[Tool.KIndToChaTy(this.plantKind)][characterStatus.Injured];
+        yield return new WaitForSeconds(0.3f);
+        this.sp.sprite = sp;
+        if(In != null)
+        {
+            StopCoroutine(In);
+            In = null;
+        }
     }
 }

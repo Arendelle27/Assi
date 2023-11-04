@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 
 
-public enum GameState
+public enum GameStatus
 {
     Start,
     InGame,
@@ -11,57 +11,70 @@ public enum GameState
 }
 public class Game : MonoSingleton<Game>
 {
-    public GameState status;
+    #region 管理器
+    public DataManager dataManager;
+    public SpriteManager spriteManager;
 
-    public GameState Status
+    public InterManager interManager;
+    #endregion 
+
+    public float timer = 0;//计时器
+
+    GameStatus status;
+    public GameStatus Status
     {
         get { return status; }
         set
         {
             status = value;
-            UIManager.Instance.UpdateUI();
+            UIManager.Instance.UpdateUI(value);
         }
     }
 
-    public CellMain CellMain;
-
-    public EffectManager effectManager;
-
-    public ExampleManager  exampleManager;
-
-    public SpriteManager spriteManager;
-
-
-    public float timer = 0;
-    void Awake()
+    private void Awake()
     {
-        this.effectManager = new EffectManager();
-        this.exampleManager = new ExampleManager();
+        this.dataManager = new DataManager();
         this.spriteManager = new SpriteManager();
 
-        this.Status = GameState.Start;
-    }
-    // Update is called once per frame
-    void Update()
-    {
-        if (this.Status == GameState.InGame)
-        {
-            this.timer+=Time.deltaTime;
-            UIManager.Instance.resText.text = ((int)this.timer).ToString();
+        this.interManager = new InterManager();
 
+    }
+    private void Start()
+    {
+        this.Init();
+        this.Status = GameStatus.Start;
+
+    }
+
+    public void StartGame()
+    {
+        PlantManager.Instance.player.gameObject.SetActive(true);
+        PlantManager.Instance.StartGenEn();
+        UIManager.Instance.gamePlane.hp.maxValue = PlantManager.Instance.player.maxHP;
+        this.Status = GameStatus.InGame;
+    }
+
+    private void Update()
+    {
+        if (this.Status == GameStatus.InGame)
+        {
+            this.timer += Time.deltaTime;
         }
+    }
+
+    public void End()
+    {
+        this.Status = GameStatus.End;
+        this.Init();
     }
 
     public void Init()
     {
         this.timer = 0;
-        InputManager.Instance.Init();
-        CellAccManager.Instance.Init();
+        PlantManager.Instance.Init();
+        PlantManager.Instance.player.gameObject.SetActive(false);
+
+        InterManager.Instance.Init();
         UIManager.Instance.Init();
-        if(this.exampleManager!=null)
-        {
-            this.exampleManager.Init();
-        }
-        this.CellMain.Init();
     }
 }
